@@ -1,0 +1,20 @@
+
+1. This converts .OBJ files to the game's .GVP format.
+This tool itself was modified/converted from early versions of XL2's ZTP converter.
+It is not complete; many changes will probably happen to it and the format.
+So if you want more features, fork it or otherwise make your own format.
+
+2. This tool DOES NOT export SGL-compatible data, nor does it export ZTP data.
+
+3. The palette file in this folder is for converting RGB textures into indexed color textures.
+You will note it only has 64-colors, and it also is not exactly the same palette file loaded on Saturn.
+This is because the textures are expected to be drawn in "64 color bank mode", which has 64 unique colors.
+The palette loaded on Saturn should incude these 64 colors in four different shades used for lighting.
+Them's the beans you get for trying to make something work in Hi-res mode.
+
+5. If you want, you can give the converter tool images that are already in indexed color.
+In this case, it WILL NOT check final color of the textue AT ALL. It will simply copy the color index.
+
+6. All textures must be targa format with RLE disabled.
+
+4. The converter tool does not auto-exit. Type in any key, then press enter, and it will exit.
