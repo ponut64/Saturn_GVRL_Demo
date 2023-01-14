@@ -446,7 +446,8 @@ inline	void	preclipping(vertex_t ** ptv, unsigned short * flip, unsigned short *
 			// 3 - 2		^
 			//-------- Edge | Y-
 			// 0 - 1		|
-		} else if( (ptv[0]->clipFlag & 3) ){//H *flip 
+		} 
+		if( (ptv[0]->clipFlag & 3) ){//H *flip 
 			//Incoming Arrangement:
 			//	0 | 1
 			//	3 | 2
@@ -459,7 +460,9 @@ inline	void	preclipping(vertex_t ** ptv, unsigned short * flip, unsigned short *
 			// 1 | 0
 			// 2 | 3
 			//	Edge	---> X+
-		} else if( !((ptv[0]->clipFlag | ptv[1]->clipFlag | ptv[2]->clipFlag | ptv[3]->clipFlag) & SCRN_CLIP_FLAGS))
+			return;
+		} 
+		if( !((ptv[0]->clipFlag | ptv[1]->clipFlag | ptv[2]->clipFlag | ptv[3]->clipFlag) & SCRN_CLIP_FLAGS))
 		{
 			*pclp = VDP1_PRECLIPPING_DISABLE; //Preclipping Disable
 			return;
