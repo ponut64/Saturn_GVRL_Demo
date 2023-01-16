@@ -26,10 +26,10 @@ void * currentAddress = (void*)LWRAM;
 
 unsigned char * dirty_buf = (unsigned char*)LWRAM;
 
-short close_snd;
-short btn1_snd;
-short btn2_snd;
-short click_snd;
+short close_snd = -1;
+short btn1_snd = -1;
+short btn2_snd = -1;
+short click_snd = -1;
 
 void	update_gamespeed(void)
 {
@@ -183,10 +183,10 @@ void	control_menu_system(void)
 	if(is_key_struck(DIGI_START))
 	{
 		if(menuToggle){
-			pcm_play(close_snd, PCM_SEMI, 7);
+			pcm_play(close_snd, PCM_SEMI, 6);
 			menuToggle = 0;
 		} else {
-			pcm_play(btn1_snd, PCM_SEMI, 7);
+			pcm_play(btn1_snd, PCM_SEMI, 6);
 			menuToggle = 1;
 		}
 		mnu.selection = 0;
@@ -300,11 +300,11 @@ void	control_menu_system(void)
 			if(is_key_struck(DIGI_DOWN))	mnu.selection+= (mnu.option_grid[X]);
 			if(is_key_struck(DIGI_UP))		mnu.selection-= (mnu.option_grid[X]);
 			if(is_key_struck(DIGI_RIGHT) | is_key_struck(DIGI_LEFT)
-				| is_key_struck(DIGI_DOWN) | is_key_struck(DIGI_UP)) pcm_play(btn2_snd, PCM_SEMI, 7);
+				| is_key_struck(DIGI_DOWN) | is_key_struck(DIGI_UP)) pcm_play(btn2_snd, PCM_SEMI, 6);
 
 		if(is_key_struck(DIGI_A))
 		{
-			pcm_play(click_snd, PCM_SEMI, 7);
+			pcm_play(click_snd, PCM_SEMI, 6);
 			switch(mnu.selection)
 			{
 				case(0):
@@ -466,10 +466,10 @@ int	main(void)
 	
 	currentAddress = gvLoad3Dmodel((Sint8*)"SPHER.GVP", currentAddress, &drawn_entity, GV_SORT_CEN, 'N');
 	
-	close_snd = load_8bit_pcm((Sint8*)"CLOSE.PCM", 23040);
-	btn1_snd = load_8bit_pcm((Sint8*)"BUTTON1.PCM", 23040);
-	btn2_snd = load_8bit_pcm((Sint8*)"BUTTON2.PCM", 23040);
-	click_snd = load_8bit_pcm((Sint8*)"CLICK.PCM", 23040);
+	click_snd =	load_adx((Sint8*)"CLICK.ADX");
+	close_snd =	load_adx((Sint8*)"CLOSE.ADX");
+	btn2_snd =	load_adx((Sint8*)"BUTTON2.ADX");
+	btn1_snd =	load_adx((Sint8*)"BUTTON1.ADX");
 	
 	//anim_defs();
 	
