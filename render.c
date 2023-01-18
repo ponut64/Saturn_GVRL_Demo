@@ -128,7 +128,6 @@ void	setFramebufferEraseRegion(int xtl, int ytl, int xbr, int ybr)
 		}
 }
 
-
 FIXED	trans_pt_by_component(POINT ptx, FIXED * normal)
 {
 	volatile FIXED transPt;
@@ -144,12 +143,13 @@ FIXED	trans_pt_by_component(POINT ptx, FIXED * normal)
 		"xtrct r0,%[ox];"
 		"mov.l @r1,r0;"		//This last move and add is the matrix component position
 		"add r0,%[ox];"
-		: 	[ox] "=r" (transPt)											//OUT
-		:	[ptptr] "r" (ptx) ,	[nmptr] "r" (normal)					//IN
-		:	"r0" , "r1"													//CLOBBERS
+		: 	[ox] "=r" (transPt)							//OUT
+		:	[ptptr] "r" (ptx) ,	[nmptr] "r" (normal)	//IN
+		:	"r0" , "r1", "mach", "macl"					//CLOBBERS
 	);
 	return transPt;
-}							
+}		
+
 
 //Set data in s for division unit.
 void		SetFixDiv(FIXED dividend, FIXED divisor) //Defined as "dividend / divisor", for fixed points, using division unit

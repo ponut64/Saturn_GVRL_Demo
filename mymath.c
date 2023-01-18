@@ -23,9 +23,9 @@ inline FIXED		fxm(FIXED d1, FIXED d2) //Fixed Point Multiplication
 	"sts MACH,r1;"		// Store system register [sts] , high of 64-bit register MAC to r1
 	"sts MACL,%[out];"	// Low of 64-bit register MAC to the register of output param "out"
 	"xtrct r1,%[out];" 	//This whole procress gets the middle 32-bits of 32 * 32 -> (2x32 bit registers)
-    :    [out] "=r" (rtval)       		 //OUT
-    :    [d1] "r" (d1), [d2] "r" (d2)    //IN
-	:		"r1"						//CLOBBERS
+    :    [out] "=r" (rtval)				//OUT
+    :    [d1] "r" (d1), [d2] "r" (d2)	//IN
+	:	"r1", "mach", "macl"		//CLOBBERS
 	);
 	return rtval;
 }
@@ -42,9 +42,9 @@ inline FIXED	fxdot(VECTOR ptA, VECTOR ptB) //Fixed-point dot product
 		"sts MACH,r1;"
 		"sts MACL,%[ox];"
 		"xtrct r1,%[ox];"
-		: 	[ox] "=r" (rtval)											//OUT
-		:	[ptr1] "r" (ptA) , [ptr2] "r" (ptB)							//IN
-		:	"r1"														//CLOBBERS
+		: 	[ox] "=r" (rtval)					//OUT
+		:	[ptr1] "r" (ptA) , [ptr2] "r" (ptB)	//IN
+		:	"r1", "mach", "macl"				//CLOBBERS
 	);
 	return rtval;
 }
