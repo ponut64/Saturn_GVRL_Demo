@@ -42,9 +42,9 @@ inline FIXED	fxdot(VECTOR ptA, VECTOR ptB) //Fixed-point dot product
 		"sts MACH,r1;"
 		"sts MACL,%[ox];"
 		"xtrct r1,%[ox];"
-		: 	[ox] "=r" (rtval)					//OUT
-		:	[ptr1] "r" (ptA) , [ptr2] "r" (ptB)	//IN
-		:	"r1", "mach", "macl"				//CLOBBERS
+		: 	[ox] "=r" (rtval), [ptr1] "+p" (ptA) , [ptr2] "+p" (ptB)	//OUT
+		:																//IN
+		:	"r1", "mach", "macl"										//CLOBBERS
 	);
 	return rtval;
 }
