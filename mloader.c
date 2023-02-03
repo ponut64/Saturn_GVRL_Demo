@@ -151,7 +151,7 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 	model->nbFrames = model_header->nbFrames;
 	
 	Sint32 bytesOff = (sizeof(modelData_t)); 
-	workAddress = (workAddress + bytesOff); //Add the texture size and the binary meta data size to the work address to reach the PDATA
+	workAddress = (workAddress + bytesOff); //Add the binary meta data size to the work address to reach the PDATA
 	
 	model->size = (unsigned int)workAddress;
 	workAddress = loadPDATA((workAddress), model);
