@@ -13,14 +13,14 @@
 	#define TV_HEIGHT (448)
 	#define TV_HALF_HEIGHT (224)
 	
-	#define NEAR_PLANE_DISTANCE (5<<16) //The minimum Z allowed
+	#define NEAR_PLANE_DISTANCE (8<<16) //The minimum Z allowed
 #else
 	#define TV_WIDTH (352)
 	#define TV_HALF_WIDTH (176)
 	#define TV_HEIGHT (224)
 	#define TV_HALF_HEIGHT (112)
 	
-	#define NEAR_PLANE_DISTANCE (10<<16) //The minimum Z allowed
+	#define NEAR_PLANE_DISTANCE (15<<16) //The minimum Z allowed
 #endif
 
 #define VRAM_TEXTURE_BASE (0x10000) //Matches jo engine specification
@@ -94,8 +94,8 @@ Render data flags:
 typedef struct {
 	int lifetime;		// Time (in fixed-point seconds) to allow the sprite to persist.
 	POINT pos; 			//World-space position for billboard scaled sprites, screenspace top-left coordinate otherwise
-	short span; 		//Screenspace X/Y span, if a billboard.
-	short texno;		//Texture table number to use
+	short span[XYZ]; 		//Screenspace X/Y span, if a billboard. 3D XYZ size of lines.
+	short texno;		//Texture table number to use OR color code (depends on draw type)
 	short useClip;		//To clip by system, in user, or outside of user.
 	unsigned char mesh;	//Boolean. 1 enables mesh effect drawing.
 	char type; 			//"B" for billboard, "S" for normal sprite.
@@ -190,14 +190,16 @@ extern int baseAsciiTexno;
 extern int sprAsciiHeight;
 extern int sprAsciiWidth;
 
-void	add_to_sprite_list(FIXED * position, short span, short texno, unsigned char mesh, char type, short useClip, int lifetime);
+void	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned char mesh, char type, short useClip, int lifetime);
 void	transform_mesh_point(FIXED * mpt, FIXED * opt, _boundBox * mpara);
 void	draw2dSquare(int * firstPt, int * scndPt, unsigned short colorData, unsigned short solid_or_border);
 void	ssh2BillboardScaledSprite(_sprite * spr);
+void	ssh2Line(_sprite * spr);
 void	drawAxis(POINT size);
 void	spr_print(int xPos, int yPos, char * data);
 void	spr_sprintf(int xPos, int yPos, ...);
-void	nbg_sprintf(void * scrnAddr /*to be returned from slLocate or other such function*/,  ...);
+void	nbg_sprintf(int x, int y,  ...);
+void	nbg_clear_text(void);
 short	menu_with_options(__basic_menu * mnu);
 
 FIXED	trans_pt_by_component(POINT ptx, FIXED * normal);

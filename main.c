@@ -196,20 +196,20 @@ void	control_menu_system(void)
 	
 	if(!menuToggle)
 	{
-		nbg_sprintf(slLocate(8,0), "Great Value Render Demo");
-		nbg_sprintf(slLocate(8,1), "Press START for Menu");
+		nbg_sprintf(8,0, "Great Value Render Demo");
+		nbg_sprintf(8,1, "Press START for Menu");
 		setFramebufferEraseRegion(0, 0, TV_WIDTH, TV_HEIGHT);
 		drawn_entity.useClip = 1; //Clip inside default clip area (screen)
 		
 		if(controlSwitch < 2 && display_control_preview)
 		{
-			nbg_sprintf(slLocate(1,25), "D-Pad: Rotation");
-			nbg_sprintf(slLocate(1,24), "B/Y: Move fwd/bck");
+			nbg_sprintf(1,25, "D-Pad: Rotation");
+			nbg_sprintf(1,24, "B/Y: Move fwd/bck");
 		}
 		
 		if(controlSwitch == 0)
 		{
-			nbg_sprintf(slLocate(1,26),"Controlling Player    ");
+			nbg_sprintf(1,26,"Controlling Player    ");
 			if(is_key_down(DIGI_UP))	pl_rot[X]-=182;
 			if(is_key_down(DIGI_DOWN))	pl_rot[X]+=182;
 												  
@@ -228,7 +228,7 @@ void	control_menu_system(void)
 			pl_RBB.pos[Z] += fxm(pl_spd<<12, slSin(pl_RBB.rot[Y] + (90 * 182)));
 		} else if(controlSwitch == 1)
 		{
-			nbg_sprintf(slLocate(1,26),"Controlling Entity   ");
+			nbg_sprintf(1,26,"Controlling Entity   ");
 			if(is_key_down(DIGI_UP))	ent_rot[X]-=182;
 			if(is_key_down(DIGI_DOWN))	ent_rot[X]+=182;
 										
@@ -257,10 +257,10 @@ void	control_menu_system(void)
 			
 			if(display_control_preview)
 			{
-			nbg_sprintf(slLocate(1,25), "D-Pad: X/Z Angle");
-			nbg_sprintf(slLocate(1,24), "B/Y: Y Angle");
+			nbg_sprintf(1,25, "D-Pad: X/Z Angle");
+			nbg_sprintf(1,24, "B/Y: Y Angle");
 			}
-			nbg_sprintf(slLocate(1,26),"Controlling Sun Angle");
+			nbg_sprintf(1,26,"Controlling Sun Angle");
 
 			if(is_key_down(DIGI_RIGHT))	sunLight[Z]-=182;
 			if(is_key_down(DIGI_LEFT))	sunLight[Z]+=182;
@@ -276,8 +276,8 @@ void	control_menu_system(void)
 		
 		color_offset_vdp1_palette(-(0x1F1F1F), &apply_color_offset);
 		
-		nbg_sprintf(slLocate(8,0), "                       ");
-		nbg_sprintf(slLocate(8,1), "                       ");
+		nbg_sprintf(8,0, "                       ");
+		nbg_sprintf(8,1, "                       ");
 
 		mnu.topLeft[X] = 0;
 		mnu.topLeft[Y] = 0;
@@ -309,42 +309,42 @@ void	control_menu_system(void)
 			{
 				case(0):
 				controlSwitch = 0;
-				nbg_sprintf(slLocate(1,26),"Controlling Player   ");
+				nbg_sprintf(1,26,"Controlling Player   ");
 				break;
 				case(1):
 				controlSwitch = 1;
-				nbg_sprintf(slLocate(1,26),"Controlling Entity   ");
+				nbg_sprintf(1,26,"Controlling Entity   ");
 				break;
 				case(2):
 				active_lights[0].pos[X] = pl_RBB.pos[X];
 				active_lights[0].pos[Z] = pl_RBB.pos[Z];
-				nbg_sprintf(slLocate(1,26),"Light Snap to Player ");
+				nbg_sprintf(1,26,"Light Snap to Player ");
 				break;
 				case(3):
-				nbg_sprintf(slLocate(1,26),"Shine/Shade Toggle   ");
+				nbg_sprintf(1,26,"Shine/Shade Toggle   ");
 				active_lights[0].bright *= -1;
 				break;
 				case(4):
-				nbg_sprintf(slLocate(1,26),"Controlling Sun Angle");
+				nbg_sprintf(1,26,"Controlling Sun Angle");
 				controlSwitch = 2;
 				break;
 				case(5):
-				nbg_sprintf(slLocate(1,26),"        Reset        ");
+				nbg_sprintf(1,26,"        Reset        ");
 				reset();
 				break;
 				case(6):
-				nbg_sprintf(slLocate(1,26),"Collision Toggled    ");
+				nbg_sprintf(1,26,"Collision Toggled    ");
 				collide_or_not = (collide_or_not) ? 0 : 1;
 				break;
 				case(7):
 				if(display_control_preview)
 				{
-				nbg_sprintf(slLocate(1, 26), "Control Preview Off  ");
-				nbg_sprintf(slLocate(1, 25), "                     ");
-				nbg_sprintf(slLocate(1, 24), "                     ");
+				nbg_sprintf(1, 26, "Control Preview Off  ");
+				nbg_sprintf(1, 25, "                     ");
+				nbg_sprintf(1, 24, "                     ");
 				display_control_preview = 0;
 				} else {
-				nbg_sprintf(slLocate(1, 26), "Control Preview On   ");
+				nbg_sprintf(1, 26, "Control Preview On   ");
 				display_control_preview = 1;
 				}
 				break;
@@ -464,7 +464,7 @@ int	main(void)
 	sprAsciiHeight = 12;
 	sprAsciiWidth = WRAP_NewTable((Sint8*)"FONT.TGA", dirty_buf, sprAsciiHeight); //last argument, tex height
 	
-	currentAddress = gvLoad3Dmodel((Sint8*)"SPHER.GVP", currentAddress, &drawn_entity, GV_SORT_CEN, 'N');
+	currentAddress = gvLoad3Dmodel((Sint8*)"SPHER.GVP", currentAddress, &drawn_entity, GV_SORT_CEN, 'N', NULL);
 	
 	click_snd =	load_adx((Sint8*)"CLICK.ADX");
 	close_snd =	load_adx((Sint8*)"CLOSE.ADX");

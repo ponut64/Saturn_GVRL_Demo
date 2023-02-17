@@ -83,14 +83,6 @@ inline FIXED	fxdiv(FIXED dividend, FIXED divisor) //Fixed-point division
 }
 
 //////////////////////////////////
-// un-fixed point the vectors and get a length out of it
-//////////////////////////////////
-int unfix_length(FIXED Max[XYZ], FIXED Min[XYZ])
-{
-	return slSquart(JO_SQUARE( (Max[X]>>16) - (Min[X]>>16) ) + JO_SQUARE( (Max[Y]>>16) - (Min[Y]>>16) ) + JO_SQUARE( (Max[Z]>>16) - (Min[Z]>>16) ));
-}
-
-//////////////////////////////////
 // Shorthand to turn two points (to represent a segment) into a vector
 //////////////////////////////////
 void	segment_to_vector(FIXED * start, FIXED * end, FIXED * out)

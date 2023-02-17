@@ -5,8 +5,9 @@
 //def.h -- the catch-all "i dunno where else this goes" files
 
 //////////////////////////////////
-// Game Resolution
-
+// 
+#define true	(1)
+#define false	(0)
 //////////////////////////////////
 // Uniform grid cell information / shorthands
 //////////////////////////////////

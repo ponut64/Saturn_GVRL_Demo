@@ -2,11 +2,11 @@
 //this file is compiled separately
 //hopefully somewhat portable
 //
-#include <SL_DEF.H> //Mostly to link us with SBL file system
-#include <SEGA_GFS.H>
+#include <sl_def.h> //Mostly to link us with SBL file system
 #include "pcmsys.h"
-#include "render.h"
-
+#include <SEGA_GFS.H>
+#define true	(1)
+#define false	(0)
 
 static const int logtbl[] = {
 /* 0 */		0, 
@@ -231,8 +231,8 @@ void			load_drv(int master_adx_frequency)
 
 short			calculate_bytes_per_blank(int sampleRate, Bool is8Bit, Bool isPAL)
 {
-	int frameCount = (isPAL == 1) ? 50 : 60;
-	int sampleSize = (is8Bit == 1) ? 8 : 16;
+	int frameCount = (isPAL == true) ? 50 : 60;
+	int sampleSize = (is8Bit == true) ? 8 : 16;
 	return ((sampleRate * sampleSize)>>3)/frameCount;
 	
 }
@@ -280,7 +280,7 @@ short			load_16bit_pcm(Sint8 * filename, int sampleRate)
 	
 	m68k_com->pcmCtrl[numberPCMs].pitchword = convert_bitrate_to_pitchword(sampleRate);
 	m68k_com->pcmCtrl[numberPCMs].playsize = (file_size>>1);
-	m68k_com->pcmCtrl[numberPCMs].bytes_per_blank = calculate_bytes_per_blank(sampleRate, 0, PCM_SYS_REGION); //Iniitalize as max volume
+	m68k_com->pcmCtrl[numberPCMs].bytes_per_blank = calculate_bytes_per_blank(sampleRate, false, PCM_SYS_REGION); //Iniitalize as max volume
 	m68k_com->pcmCtrl[numberPCMs].bitDepth = PCM_TYPE_16BIT; //Select 16-bit
 	m68k_com->pcmCtrl[numberPCMs].loopType = 0; //Initialize as non-looping
 	m68k_com->pcmCtrl[numberPCMs].volume = 7; //Initialize as max volume
@@ -322,7 +322,7 @@ short			load_8bit_pcm(Sint8 * filename, int sampleRate)
 	
 	m68k_com->pcmCtrl[numberPCMs].pitchword = convert_bitrate_to_pitchword(sampleRate);
 	m68k_com->pcmCtrl[numberPCMs].playsize = (file_size);
-	m68k_com->pcmCtrl[numberPCMs].bytes_per_blank = calculate_bytes_per_blank(sampleRate, 1, PCM_SYS_REGION); //Iniitalize as max volume
+	m68k_com->pcmCtrl[numberPCMs].bytes_per_blank = calculate_bytes_per_blank(sampleRate, true, PCM_SYS_REGION); //Iniitalize as max volume
 	m68k_com->pcmCtrl[numberPCMs].bitDepth = PCM_TYPE_8BIT; //Select 8-bit
 	m68k_com->pcmCtrl[numberPCMs].loopType = 0; //Initialize as non-looping
 	m68k_com->pcmCtrl[numberPCMs].volume = 7; //Iniitalize as max volume
@@ -365,10 +365,10 @@ short		load_adx(Sint8 * filename)
 // Step 2: Check the data we just loaded and make sure it's an ADX file.
 // If the data does not match what the decompression routine expects, this function will return -1.
 //////////////////////////
-	// nbg_sprintf(slLocate(13, 9), "ohalf(%i)", adx.one_half);
-	// nbg_sprintf(slLocate(13, 10), "blocksz(%i)", adx.block_size);
-	// nbg_sprintf(slLocate(13, 11), "bitdepth(%i)", adx.bit_depth);
-	// nbg_sprintf(slLocate(13, 12), "srate(%i)", adx.sample_rate);
+	// jo_printf(13, 9, "ohalf(%i)", adx.one_half);
+	// jo_printf(13, 10, "blocksz(%i)", adx.block_size);
+	// jo_printf(13, 11, "bitdepth(%i)", adx.bit_depth);
+	// jo_printf(13, 12, "srate(%i)", adx.sample_rate);
 	if(adx.one_half != 32768 || adx.block_size != 18 || adx.bit_depth != 4) return -1; 
 //////////////////////////
 // Step 3: Parse the data in the header to the sound driver PCM control struct.
@@ -381,10 +381,10 @@ short		load_adx(Sint8 * filename)
 	m68k_com->pcmCtrl[numberPCMs].loAddrBits = (unsigned short)( (unsigned int)working_address & 0xFFFF);
 	m68k_com->pcmCtrl[numberPCMs].pitchword = convert_bitrate_to_pitchword(adx.sample_rate);
 	m68k_com->pcmCtrl[numberPCMs].playsize = (adx.sample_ct / 32);
-	short bpb = calculate_bytes_per_blank((int)adx.sample_rate, 0, PCM_SYS_REGION); //Iniitalize as max volume
+	short bpb = calculate_bytes_per_blank((int)adx.sample_rate, false, PCM_SYS_REGION); //Iniitalize as max volume
 	if(bpb != 768 && bpb != 512 && bpb != 384 && bpb != 256 && bpb != 192 && bpb != 128)
 	{
-		nbg_sprintf(slLocate(0, 1), "!(ADX INVALID BYTE-RATE)!");
+		slPrint("!(ADX INVALID BYTE-RATE)!", slLocate(0, 1));
 		return -2;
 	}
 	m68k_com->pcmCtrl[numberPCMs].bytes_per_blank = bpb;
@@ -409,7 +409,7 @@ short		load_adx(Sint8 * filename)
 
 void		sdrv_vblank_rq(void)
 {
-	//nbg_sprintf(slLocate(0, 0), "drv_stat(%i)", m68k_com->start);
+	//jo_printf(0, 0, "drv_stat(%i)", m68k_com->start);
 	m68k_com->start = 1;	
 }
 

@@ -1,8 +1,9 @@
 
-#include <sl_def.h>
+#include <SL_DEF.H>
 #include <SEGA_GFS.H>
+#include "def.h"
 #include "tga.h"
-
+#include "render.h"
 #include "bounder.h"
 
 #include "mloader.h"
@@ -117,9 +118,9 @@ void * loadPDATA(void * startAddress, entity_t * model)
     return workAddress;
 }
 
-void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, unsigned short sortType, char modelType)
+void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, unsigned short sortType, char modelType, entity_t * src_tex_model)
 {
-
+	nbg_sprintf(2, 2, "%s", filename);
 	modelData_t * model_header;
 	void * workAddress = startAddress;
 	model->type = modelType;
@@ -128,6 +129,7 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 	Sint32 file_size;
 	
 	Sint32 local_name = GFS_NameToId(filename);
+	char loadingNewTextures = 'Y';
 
 //Open GFS
 	gfs_mdat = GFS_Open((Sint32)local_name);
@@ -151,32 +153,53 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 	model->nbFrames = model_header->nbFrames;
 	
 	Sint32 bytesOff = (sizeof(modelData_t)); 
-	workAddress = (workAddress + bytesOff); //Add the binary meta data size to the work address to reach the PDATA
+	workAddress = (workAddress + bytesOff); //Add the texture size and the binary meta data size to the work address to reach the PDATA
 	
 	model->size = (unsigned int)workAddress;
 	workAddress = loadPDATA((workAddress), model);
 	model->size = (unsigned int)workAddress - model->size;
 
-	model->numTexture = setTextures(model, numTex); //numTex is a tga.c directive
+	int baseTex = numTex; //numTex is a tga.c directive
+	if(src_tex_model != NULL) 
+	{
+	baseTex = src_tex_model->base_texture;
+	model->numTexture = src_tex_model->numTexture;
+	setTextures(model, baseTex); 
+	loadingNewTextures = 'N';
+	} else {
+	model->numTexture = setTextures(model, baseTex); 
+	}
+	
+
 
     workAddress = loadAnimations(workAddress, model, model_header);
 	// A temporary address is used to retrieve the following data.
 	// This is used because the following data is to be overwritten whenever new model data is loaded.
 	// To facilitate this, workAddress is pointed forward past all important data that must not be overwritten.
 	// Thus the temporary pointer is pointing to all data that can be thrown out once parsed.
-	//void * temporaryAddress;
-	/*temporaryAddress = */loadTextures(workAddress, model);
-	//unsigned char * readByte = temporaryAddress;
+	// The "NewTex" flag will determine if textures are loaded at all or not.
+	//unsigned char * readByte = workAddress;
+	if(loadingNewTextures == 'Y')
+	{
+		//void * temporaryAddress;
+		//temporaryAddress =
+		loadTextures(workAddress, model);
+		//readByte = temporaryAddress;
+	}
 	////////////////
 	// If the model type is 'B' (for BUILDING), create combined textures.
 	// Also read the item data at the end of the payload.
 	////////////////
-	if(model->type == 'B')
+	if(model->type == MODEL_TYPE_BUILDING && loadingNewTextures == 'Y')
 	{
-		for(int j = 0; j < model->numTexture+1; j++)
-		{
-			make_combined_textures(model->base_texture + j);
-		}
+			for(int j = 0; j < model->numTexture+1; j++)
+			{
+				make_combined_textures(model->base_texture + j);
+			}
+		//unsigned char * total_items = &readByte[0];
+		//unsigned char * unique_items = &readByte[1];
+		//short * item_data = (short *)&readByte[2];	
+		
 		/////////////////////////////////////////////
 		// Item Data Payload
 		// It is appended at the end of the binary, past the textures.
@@ -186,10 +209,25 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 		// 1 byte: unique items
 		// every 8 bytes after
 		// item number, x, y, z, position (relative to entity) as 16-bit int
-		//
-		// The converter tool can output this data, but this loader is not equipped for it, because it is a game engine feature.
-		//
 		/////////////////////////////////////////////
+		//for(int q = 0; q < *total_items; q++)
+		//{
+		//	BuildingPayload[total_building_payload].object_type = *item_data++;
+		//	BuildingPayload[total_building_payload].pos[X] = *item_data++;
+		//	BuildingPayload[total_building_payload].pos[Y] = *item_data++;
+		//	BuildingPayload[total_building_payload].pos[Z] = *item_data++;
+			//Some way to find what entity # we're working with right now
+		//	BuildingPayload[total_building_payload].root_entity = (unsigned short)(model - entities);
+		//	total_building_payload++;
+		// jo_printf(1, 20+q, "item(%i)", BuildingPayload[q].object_type);
+		// jo_printf(16, 20+q, "item(%i)", BuildingPayload[q].root_entity);
+		// jo_printf(1, 15+q, "x(%i)", BuildingPayload[q].pos[X]);
+		// jo_printf(13, 15+q, "y(%i)", BuildingPayload[q].pos[Y]);
+		// jo_printf(26, 15+q, "z(%i)", BuildingPayload[q].pos[Z]);
+		//}
+		
+		// jo_printf(1, 11, "uitem(%i)", *total_items);
+		// jo_printf(1, 13, "amnti(%i)", *unique_items);
 	} 
 
 	
@@ -217,7 +255,7 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 	}
 		}
 	
-	model->file_done = 1;
+	model->file_done = true;
 	
 	//Alignment
 	volatile unsigned int aligning_address = (volatile unsigned int)workAddress;

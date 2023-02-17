@@ -1,4 +1,4 @@
-#include "SL_DEF.H"
+#include <sl_def.h>
 #include "def.h"
 #include "mloader.h"
 #include "mymath.h"
@@ -128,6 +128,7 @@ void	setFramebufferEraseRegion(int xtl, int ytl, int xbr, int ybr)
 		}
 }
 
+
 FIXED	trans_pt_by_component(POINT ptx, FIXED * normal)
 {
 	volatile FIXED transPt;
@@ -148,8 +149,7 @@ FIXED	trans_pt_by_component(POINT ptx, FIXED * normal)
 		:	"r0" , "r1", "mach", "macl"					//CLOBBERS
 	);
 	return transPt;
-}		
-
+}							
 
 //Set data in s for division unit.
 void		SetFixDiv(FIXED dividend, FIXED divisor) //Defined as "dividend / divisor", for fixed points, using division unit
@@ -244,9 +244,9 @@ void	sort_master_polys(void)
 	} else if(send_draw_stats == 2)
 	{
 		unsigned short txt_base = (hi_res_switch) ? 1 : 2;
-		nbg_sprintf(slLocate(txt_base, 24), "TRPLY:(%i)", transPolys[0]);
-		nbg_sprintf(slLocate(txt_base, 25), "SNTPL:(%i)", ssh2SentPolys[0] + msh2SentPolys[0]);
-		nbg_sprintf(slLocate(txt_base, 26), "VERTS:(%i)", transVerts[0]);
+		nbg_sprintf(txt_base, 24, "TRPLY:(%i)", transPolys[0]);
+		nbg_sprintf(txt_base, 25, "SNTPL:(%i)", ssh2SentPolys[0] + msh2SentPolys[0]);
+		nbg_sprintf(txt_base, 26, "VERTS:(%i)", transVerts[0]);
 	}
 	
 	SPRITE_T * user_sprite;
