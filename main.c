@@ -464,7 +464,7 @@ int	main(void)
 	sprAsciiHeight = 12;
 	sprAsciiWidth = WRAP_NewTable((Sint8*)"FONT.TGA", dirty_buf, sprAsciiHeight); //last argument, tex height
 	
-	currentAddress = gvLoad3Dmodel((Sint8*)"SPHER.GVP", currentAddress, &drawn_entity, GV_SORT_CEN, 'N', NULL);
+	currentAddress = gvLoad3Dmodel((Sint8*)"BOX.GVP", currentAddress, &drawn_entity, GV_SORT_CEN, 'N', NULL);
 	
 	click_snd =	load_adx((Sint8*)"CLICK.ADX");
 	close_snd =	load_adx((Sint8*)"CLOSE.ADX");

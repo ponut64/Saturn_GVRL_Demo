@@ -18,11 +18,11 @@ int baseAsciiTexno = 0;
 int sprAsciiWidth = 0;
 int sprAsciiHeight = 0;
 
-void	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned char mesh, char type, short useClip, int lifetime)
+short	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned short colorBank, unsigned char mesh, char type, short useClip, int lifetime)
 {
-	int used_sprite = 64;
+	short used_sprite = -1;
 	//Find an unused sprite list entry
-	for(int i = 0; i < MAX_SPRITES; i++)
+	for(short i = 0; i < MAX_SPRITES; i++)
 	{
 		if(sprWorkList[i].type == 'N')
 		{
@@ -30,7 +30,7 @@ void	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned ch
 			break;
 		}
 	}
-	if(used_sprite == 64) return;
+	if(used_sprite == -1) return used_sprite;
 	
 	sprWorkList[used_sprite].lifetime = lifetime;
 	sprWorkList[used_sprite].pos[X] = position[X];
@@ -40,9 +40,11 @@ void	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned ch
 	sprWorkList[used_sprite].span[Y] = span[Y];
 	sprWorkList[used_sprite].span[Z] = span[Z];
 	sprWorkList[used_sprite].texno = texno;
+	sprWorkList[used_sprite].colorBank = colorBank;
 	sprWorkList[used_sprite].mesh = mesh;
 	sprWorkList[used_sprite].type = type;
 	sprWorkList[used_sprite].useClip = useClip;
+	return used_sprite;
 }
 
 void	transform_mesh_point(FIXED * mpt, FIXED * opt, _boundBox * mpara)
@@ -72,6 +74,7 @@ void	transform_mesh_point(FIXED * mpt, FIXED * opt, _boundBox * mpara)
 	transVerts[0]++;
 }
 
+//solid_or_border : 0 for solid, 1 for border
 void	draw2dSquare(int * firstPt, int * scndPt, unsigned short colorData, unsigned short solid_or_border)
 {
 	//
@@ -160,20 +163,38 @@ void	ssh2BillboardScaledSprite(_sprite * spr)
  
         //Screen Clip Flags for on-off screen decimation
 		clipping(&ssh2VertArea[0], spr->useClip);
-		ssh2VertArea[0].clipFlag &= SCRN_CLIP_FLAGS; //Ignore Z clipping for this stuff.... could just make a new clipper func..
 	
 		transVerts[0] += 1;
+		int spanX;
+		int spanY;
 		
-		//If the vertice is off-screen or too far away, return.
-		if(ssh2VertArea[0].clipFlag || ssh2VertArea[0].pnt[Z] > FAR_PLANE_DISTANCE) return;
-		int used_spanX = (spr->span[X] * inverseZ)>>16;
-		int used_spanY = (spr->span[Y] * inverseZ)>>16;
-		FIXED pntA[2] = {ssh2VertArea[0].pnt[X] + used_spanX, ssh2VertArea[0].pnt[Y] + used_spanY};
-		FIXED pntC[2] = {ssh2VertArea[0].pnt[X] - used_spanX, ssh2VertArea[0].pnt[Y] - used_spanY};
 		
-        ssh2SetCommand(pntA, 0, pntC, 0,
-		1 /*Scaled Sprite, no zoom point*/, 0x1090 | (spr->mesh<<8) | usrClp /*64 color bank, HSS, enable/disable usr clip*/, 
-		pcoTexDefs[spr->texno].SRCA, 2<<6, pcoTexDefs[spr->texno].SIZE, 0, ssh2VertArea[0].pnt[Z]);
+		if(spr->type == SPRITE_TYPE_BILLBOARD)
+		{
+			//ssh2VertArea[0].clipFlag &= SCRN_CLIP_FLAGS; //Ignore Z clipping for this (?)
+			//If the vertice is off-screen or too far away, return.
+			if(ssh2VertArea[0].clipFlag || ssh2VertArea[0].pnt[Z] > FAR_PLANE_DISTANCE) return;
+			spanX = (spr->span[X] * inverseZ)>>16;
+			spanY = (spr->span[Y] * inverseZ)>>16;
+			FIXED pntA[2] = {ssh2VertArea[0].pnt[X] + spanX, ssh2VertArea[0].pnt[Y] + spanY};
+			FIXED pntC[2] = {ssh2VertArea[0].pnt[X] - spanX, ssh2VertArea[0].pnt[Y] - spanY};
+			
+			ssh2SetCommand(pntA, 0, pntC, 0,
+			1 /*Scaled Sprite, no zoom point*/, 0x1090 | (spr->mesh<<8) | usrClp /*64 color bank, HSS, enable/disable usr clip*/, 
+			pcoTexDefs[spr->texno].SRCA, spr->colorBank, pcoTexDefs[spr->texno].SIZE, 0, ssh2VertArea[0].pnt[Z]);
+		} else if(spr->type == SPRITE_TYPE_UNSCALED_BILLBOARD)
+		{
+			//If the vertice is off-screen, return. Note does not stop if too far away.
+			if(ssh2VertArea[0].clipFlag) return;
+			spanX = ((pcoTexDefs[spr->texno].SIZE & 0x3F00)>>5)>>1;
+			spanY = (pcoTexDefs[spr->texno].SIZE & 0xFF)>>1;
+			FIXED pntA[2] = {ssh2VertArea[0].pnt[X] - spanX, ssh2VertArea[0].pnt[Y] - spanY};
+			
+			ssh2SetCommand(pntA, 0, 0, 0,
+			0 /*Normal Sprite*/, 0x1090 | (spr->mesh<<8) | usrClp /*64 color bank, HSS, enable/disable usr clip*/, 
+			pcoTexDefs[spr->texno].SRCA, spr->colorBank, pcoTexDefs[spr->texno].SIZE, 0, 1<<16);
+		}
+
 }
 
 void	ssh2Line(_sprite * spr)
@@ -244,20 +265,65 @@ void	ssh2Line(_sprite * spr)
  
         //Screen Clip Flags for on-off screen decimation
 		clipping(&ssh2VertArea[i], spr->useClip);
-		ssh2VertArea[i].clipFlag &= SCRN_CLIP_FLAGS; //Ignore Z clipping for this stuff.... could just make a new clipper func..
-		used_pos[X] += spr->span[X]<<3;
-		used_pos[Y] += spr->span[Y]<<3;
-		used_pos[Z] += spr->span[Z]<<3;
+		//ssh2VertArea[i].clipFlag &= SCRN_CLIP_FLAGS; //Ignore Z clipping for this stuff.... could just make a new clipper func..
+		used_pos[X] += spr->span[X]<<4;
+		used_pos[Y] += spr->span[Y]<<4;
+		used_pos[Z] += spr->span[Z]<<4;
 	}
 		transVerts[0] += 2;
 		
 		//If the vertice is off-screen or too far away, return.
 		if(ssh2VertArea[0].clipFlag || ssh2VertArea[0].pnt[Z] > FAR_PLANE_DISTANCE) return;
-		
+		int used_z = (spr->type == SPRITE_TYPE_3DLINE) ? ssh2VertArea[0].pnt[Z] : 1<<16;
         ssh2SetCommand(ssh2VertArea[0].pnt, ssh2VertArea[0].pnt, ssh2VertArea[1].pnt, ssh2VertArea[1].pnt,
 		5 /*Polyline Setting*/, 0x8C0 | usrClp/*manual specifies 0xC0 for polyline, DO NOT CHANGE BITS 7-6*/,
-		0 /*SRCA*/, spr->texno /*COLOR BANK CODE*/, 0 /*CMDSIZE*/, 0 /*GR ADDR*/, 3<<16 /*Z*/);
+		0 /*SRCA*/, spr->colorBank /*COLOR BANK CODE*/, 0 /*CMDSIZE*/, 0 /*GR ADDR*/, used_z /*Z*/);
 }
+
+void	ssh2NormalSprite(_sprite * spr)
+{
+	int ptv[XY] = {spr->pos[X] - TV_HALF_WIDTH, spr->pos[Y] - TV_HALF_HEIGHT};
+	//Let sprite type allow mesh strobing, bank strobing, or on/off strobing.
+	//Let span[X] determine strobe status (strobe on, strobe off) 0 or 1.
+	//Let span[Y] determine strobe interval, in sub-second unit times.
+	//Let span[Z] hold a rolling timer (from 0 to 1 seconds) for the strobe.
+	
+	//To be modified by blink strobes
+	unsigned short used_size = pcoTexDefs[spr->texno].SIZE;
+	//To be modified by flash strobes
+	unsigned short used_colrbnk = spr->colorBank;
+	
+	if(spr->type == SPRITE_MESH_STROBE || spr->type == SPRITE_FLASH_STROBE || spr->type == SPRITE_BLINK_STROBE)
+	{
+		unsigned short * tlimit = (unsigned short *)&spr->span[Y];
+		unsigned short * tcur = (unsigned short *)&spr->span[Z];
+		if(*tcur > *tlimit)
+		{
+			*tcur = 0;
+			spr->span[X] = (spr->span[X]) ? 0 : 1;
+			spr->extra += 1;
+		}
+		//*tcur += delta_time; //Commented out because this isn't in this demo
+		
+		if(spr->type == SPRITE_BLINK_STROBE)
+		{
+			used_size = (spr->span[X]) ? 0 : used_size;
+		} else if(spr->type == SPRITE_MESH_STROBE)
+		{
+			spr->mesh = (spr->span[X]) ? 0 : 1;
+		} else if(spr->type == SPRITE_FLASH_STROBE)
+		{
+			used_colrbnk |= (spr->span[X]) ? 0x8000 : 0;
+		}
+	}
+	
+	ssh2SetCommand(ptv, 0, 0, 0, 0 /*CMD CTRL*/, 0x890 | (spr->mesh<<8) /*COMMAND MODES*/, 
+				pcoTexDefs[spr->texno].SRCA /*SRCA*/, used_colrbnk /*COLOR BANK CODE*/,
+				used_size /*CMDSIZE*/, 0 /*GR ADDR*/, 1<<16 /*Z*/
+				);
+
+}
+
 
 	//(This function is safe to run on either master or slave)
 void	drawAxis(POINT size)
@@ -362,10 +428,19 @@ void	drawAxis(POINT size)
 	
 }
 
+void	draw_normal_sprite(int xPos, int yPos, unsigned short texno, unsigned short colrBank)
+{
+	int ptv[XY] = {xPos - TV_HALF_WIDTH, yPos - TV_HALF_HEIGHT};
+	msh2SetCommand(ptv, 0, 0, 0, 0 /*CMD CTRL*/, 0x890 /*COMMAND MODES*/, 
+				pcoTexDefs[texno].SRCA /*SRCA*/, colrBank /*COLOR BANK CODE*/,
+				pcoTexDefs[texno].SIZE /*CMDSIZE*/, 0 /*GR ADDR*/, 1<<16 /*Z*/
+				);
+}
+
 void	spr_print(int xPos, int yPos, char * data)
 {
 	int len = 0;
-	char texIndex = 0;
+	int texIndex = 0;
 	char nextChar = data[0];
 	
 	len = strlen(data);
@@ -399,7 +474,7 @@ void	spr_print(int xPos, int yPos, char * data)
 	texIndex = (baseAsciiTexno + nextChar)-32;
 
 	msh2SetCommand(ptv, 0, 0, 0, 0 /*CMD CTRL*/, 0x890 /*COMMAND MODES*/, 
-				pcoTexDefs[(unsigned char)texIndex].SRCA /*SRCA*/, 0 /*COLOR BANK CODE*/,
+				pcoTexDefs[(unsigned char)texIndex].SRCA /*SRCA*/, 2 /*COLOR BANK CODE*/,
 				pcoTexDefs[(unsigned char)texIndex].SIZE /*CMDSIZE*/, 0 /*GR ADDR*/, 1<<16 /*Z*/
 				);
 	ptv[X] += sprAsciiWidth; //Some number added to xPos to distance the characters
@@ -416,7 +491,7 @@ va_list vmlist;
 va_start(vmlist, NULL);
 
 do {
-	sprintf(sprintf_buffer, va_arg(vmlist, char *), va_arg(vmlist, int));
+	sprintf(sprintf_buffer, va_arg(vmlist, char *), va_arg(vmlist, int), va_arg(vmlist, int), va_arg(vmlist, int));
 	spr_print(xPos, yPos, sprintf_buffer); 
 	} while(0);
 	
@@ -429,7 +504,7 @@ va_list vmlist;
 va_start(vmlist, NULL);
 
 do {
-	sprintf(sprintf_buffer, va_arg(vmlist, char *), va_arg(vmlist, int));
+	sprintf(sprintf_buffer, va_arg(vmlist, char *), va_arg(vmlist, int), va_arg(vmlist, int), va_arg(vmlist, int));
 	slPrint(sprintf_buffer, slLocate(x,y)); 
 	} while(0);
 	
@@ -440,7 +515,7 @@ void	nbg_clear_text(void)
 {
 	for(int y = 0; y < 30; y++)
 	{
-		slPrint("                                        ", slLocate(0,y));
+		slPrint("                                            ", slLocate(0,y));
 	}
 }
 

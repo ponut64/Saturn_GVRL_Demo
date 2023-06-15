@@ -28,16 +28,17 @@
 #define MAP_TO_VRAM(sh2map_vram_addr) ((sh2map_vram_addr - VDP1_VRAM)>>3) 
 #define INTERNAL_MAX_POLY 2600 //Slave only 1700
 #define INTERNAL_MAX_VERTS 2800 //Slave only 2800
-#define MAX_SSH2_SENT_POLYS (700) //SpriteBuf size limitation // thanks VBT for fixing sglarea.o for me
+#define MAX_SSH2_SENT_POLYS (700) //SpriteBuf size limitation // thanks VBT for fixing sglarea.o for me (?)
 #define MAX_MSH2_SENT_POLYS (600) //SpriteBuf size limitation 
 #define MAX_SSH2_ENTITY_VERTICES (500)
-#define MAX_MSH2_ENTITY_VERTICES (300)
+#define MAX_MSH2_ENTITY_VERTICES (500) //This is coming from def.h for hmap.c, but it needs to be at least this much.
 #define	MAX_SIMULTANEOUS_ANIMATED_ENTITIES (5) //RAM-wise, can be pretty high. CPU-wise, probably not.
 // Base PMOD: Bit 12 is HSS
 #define VDP1_BASE_PMODE (0x1490)
 // CMDCTRL = Select Distorted Sprite
-#define VDP1_BASE_CMDCTRL (2)
-#define VDP1_PRECLIPPING_DISABLE (2048)
+#define VDP1_BASE_CMDCTRL			(0x2)
+#define VDP1_POLYLINE_CMDCTRL		(0x5)
+#define VDP1_PRECLIPPING_DISABLE 	(2048)
 //VDP1 perf limit depends on how many pixels it's drawing.
 //User Clipping Settings
 #define SYS_CLIPPING (0)
@@ -69,37 +70,50 @@ Render data flags:
 	
 	Byte 1 of render_data_flags:
 	|	0		|	1		|	2		|	3		|	4	-	5 	|	6	-	7 |		
-	  Dual-plane	Mesh		-			MSB On		Tex. flip	  Sorting rule
+	  Dual-plane	Mesh	 Polyline		MSB On		Tex. flip	  Sorting rule
 	Byte 2 of render_data_flags:
 	|	8		|	9		|	10		|	11		|	12	-	13 	|	14	-	15 |		
-	Subdivision	  Collision					 
+	Subdivision	  Collision		Ladder	Climbable			 
 */
-	#define GV_FLAG_SINGLE	(0x1) // Zero, dual-plane. One, single-plane.
-	#define GV_FLAG_MESH	(0x2) // Zero, no mesh. One, mesh.
-	#define GV_FLAG_DARK	(0x8) // Zero, normal light. One, MSB is enabled, making the polygon dark.
-	#define GV_FLAG_NDIV	(0x100) // Zero, polygon can subdivide (in supported objects). One, no subdivision.
-	#define GV_FLAG_PHYS	(0x200) // Zero, physical plane (in supported objects). One, no collision with plane.
-	#define GV_SORT_MAX		(0x40)
-	#define GV_SORT_CEN		(0x80)
-	#define GV_SORT_MIN		(0xC0)
-	#define GV_FLIP_V		(0x20)
-	#define GV_FLIP_H		(0x10)
-	#define GV_FLIP_HV		(0x30)
+	#define GV_FLAG_SINGLE		(0x1) // Zero, dual-plane. One, single-plane.
+	#define GV_FLAG_MESH		(0x2) // Zero, no mesh. One, mesh.
+	#define GV_FLAG_POLYLINE	(0x4) // Zero, normal polygon. One, draws with polyline. Could be somewhere else.
+	#define GV_FLAG_DARK		(0x8) // Zero, normal light. One, MSB is enabled, making the polygon dark.
+	#define GV_FLAG_NDIV		(0x100) // Zero, polygon can subdivide (in supported objects). One, no subdivision.
+	#define GV_FLAG_PHYS		(0x200) // Zero, physical plane (in supported objects). One, no collision with plane.
+	#define GV_FLAG_LADDER		(0x400) // Boolean. 1 = ladder. 0 = no ladder. Notice: all ladders are climbable.
+	#define GV_FLAG_CLIMBABLE	(0x800) //Boolean. 1 = Climbable. 0 = not climbable.
+	#define GV_SORT_MAX			(0x40)
+	#define GV_SORT_CEN			(0x80)
+	#define GV_SORT_MIN			(0xC0)
+	#define GV_FLIP_V			(0x20)
+	#define GV_FLIP_H			(0x10)
+	#define GV_FLIP_HV			(0x30)
 	#define GET_SORT_DATA(n)	(n & 0xC0)
 	#define GET_FLIP_DATA(n)	(n & 0x30)
-
+	
 //////////////////////////////////
 // Engine's working struct for drawing raw sprites
 ///////////// /////////////////////
 typedef struct {
 	int lifetime;		// Time (in fixed-point seconds) to allow the sprite to persist.
 	POINT pos; 			//World-space position for billboard scaled sprites, screenspace top-left coordinate otherwise
-	short span[XYZ]; 		//Screenspace X/Y span, if a billboard. 3D XYZ size of lines.
+	short span[XYZ];	//Screenspace X/Y span, if a billboard. 3D XYZ size of lines. Other uses apply.
 	short texno;		//Texture table number to use OR color code (depends on draw type)
+	short colorBank;	//Color bank to use
 	short useClip;		//To clip by system, in user, or outside of user.
+	unsigned short extra;	//Operation-specific extra data.
 	unsigned char mesh;	//Boolean. 1 enables mesh effect drawing.
-	char type; 			//"B" for billboard, "S" for normal sprite.
-} _sprite; //22 bytes each
+	char type; 			//"B" for billboard, "U" for unscaled billboard, "S" for normal sprite.
+} _sprite; //28 bytes each
+#define SPRITE_TYPE_BILLBOARD			('B')
+#define SPRITE_TYPE_UNSCALED_BILLBOARD	('b')
+#define SPRITE_TYPE_3DLINE				('L')
+#define SPRITE_TYPE_UNSORTED_LINE		('l')
+#define SPRITE_TYPE_NORMAL	('S')
+#define SPRITE_MESH_STROBE	('M')
+#define SPRITE_FLASH_STROBE	('F')
+#define SPRITE_BLINK_STROBE	('O')
 
 //////////////////////////////////
 // Post-transformed vertice data struct
@@ -123,6 +137,14 @@ typedef struct {
 //////////////////////////////////
 // Palette Coded (Indexed Color) texture definition
 //////////////////////////////////
+/*
+SIZE parameter:
+CMDSIZE of VDP1 Command Table
+15		14		13		12		11		10		9		8		7		6		5		4		3		2		1		0
+N		N	|				Texture width / 8				||						Texture height						|
+13-8: Texture width (in << 3 units)
+7-0: Texture height (in integer units)
+*/
 typedef struct{
 	unsigned short SIZE; //VDP1 Size Word
 	unsigned short SRCA; //VDP1 Source Address Word (MAP_TO_VRAM)
@@ -175,8 +197,8 @@ extern unsigned short top_left_erase_pt;
 extern unsigned short btm_rite_erase_pt;
 extern int send_draw_stats;
 extern int hi_res_switch;
-extern vertex_t ssh2VertArea[500];
-extern vertex_t msh2VertArea[300];
+extern vertex_t ssh2VertArea[MAX_SSH2_ENTITY_VERTICES];
+extern vertex_t msh2VertArea[MAX_MSH2_ENTITY_VERTICES];
 extern _sprite	sprWorkList[MAX_SPRITES];
 extern int * ssh2SentPolys;
 extern int * msh2SentPolys;
@@ -190,18 +212,23 @@ extern int baseAsciiTexno;
 extern int sprAsciiHeight;
 extern int sprAsciiWidth;
 
-void	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned char mesh, char type, short useClip, int lifetime);
+//subrender.c
+void	plane_rendering_with_subdivision(entity_t * ent);
+//2drender.c
+short	add_to_sprite_list(FIXED * position, short * span, short texno, unsigned short colorBank, unsigned char mesh, char type, short useClip, int lifetime);
 void	transform_mesh_point(FIXED * mpt, FIXED * opt, _boundBox * mpara);
 void	draw2dSquare(int * firstPt, int * scndPt, unsigned short colorData, unsigned short solid_or_border);
 void	ssh2BillboardScaledSprite(_sprite * spr);
 void	ssh2Line(_sprite * spr);
+void	ssh2NormalSprite(_sprite * spr);
 void	drawAxis(POINT size);
+void	draw_normal_sprite(int xPos, int yPos, unsigned short texno, unsigned short colrBank);
 void	spr_print(int xPos, int yPos, char * data);
 void	spr_sprintf(int xPos, int yPos, ...);
 void	nbg_sprintf(int x, int y,  ...);
 void	nbg_clear_text(void);
 short	menu_with_options(__basic_menu * mnu);
-
+//render.c
 FIXED	trans_pt_by_component(POINT ptx, FIXED * normal);
 void	SetFixDiv(FIXED dividend, FIXED divisor); //Defined as "dividend / divisor", for fixed points, using division unit
 void	ssh2SetCommand(FIXED * p1, FIXED * p2, FIXED * p3, FIXED * p4, Uint16 cmdctrl, Uint16 cmdpmod, Uint16 cmdsrca, Uint16 cmdcolr, Uint16 cmdsize, Uint16 cmdgrda, FIXED drawPrty);

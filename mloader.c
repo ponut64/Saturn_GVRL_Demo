@@ -45,8 +45,8 @@ void * loadTextures(void * workAddress, entity_t * model)
 	unsigned char tHeight = 0;
 	unsigned char tWidth = 0;
 	unsigned int tSize = 0;
-	// jo_printf(0, 14, "(%i)", model->numTexture);
-	// jo_printf(0, 15, "(%i)", debug_addr[0]);
+	//nbg_sprintf(0, 14, "(%i)", model->numTexture);
+	// nbg_sprintf(0, 15, "(%i)", debug_addr[0]);
 	for(int j = 0; j < model->numTexture+1; j++)
 	{
 		readByte+=2;	//Skip over a boundary short word, 0xF7F7
@@ -101,7 +101,8 @@ void * loadAnimations(void * startAddress, entity_t * model, modelData_t * model
 
 }
 
-void * loadPDATA(void * startAddress, entity_t * model)
+//i hope xl2 never looks at this weird mutant mess i've made
+void * loadGVPLY(void * startAddress, entity_t * model)
 {
     void * workAddress = startAddress;
 
@@ -109,11 +110,14 @@ void * loadPDATA(void * startAddress, entity_t * model)
         workAddress=(void*)(workAddress + sizeof(GVPLY));
         model->pol->pntbl = (POINT*)workAddress;
         workAddress=(void*)(workAddress + (sizeof(POINT) * model->pol->nbPoint));
-        model->pol->pltbl = (POLYGON*)workAddress;
-        workAddress=(void*)(workAddress + (sizeof(POLYGON) * model->pol->nbPolygon));
+        model->pol->pltbl = (_quad*)workAddress;
+        workAddress=(void*)(workAddress + (sizeof(_quad) * model->pol->nbPolygon));
+		model->pol->nmtbl = (POINT*)workAddress;
+        workAddress=(void*)(workAddress + (sizeof(POINT) * model->pol->nbPolygon));
+		model->pol->maxtbl = (unsigned char *)workAddress;
+        workAddress=(void*)(workAddress + (sizeof(unsigned char) * model->pol->nbPolygon));
         model->pol->attbl = (gvAtr*)workAddress;
         workAddress=(void*)(workAddress + (sizeof(gvAtr) * model->pol->nbPolygon));
-   
 
     return workAddress;
 }
@@ -148,27 +152,27 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 
 	model->first_portal = (unsigned char)model_header->first_portal;
 
-	//ADDED
-    model->nbMeshes = model_header->TOTAL_MESH;
+	//Needed to load/play animations correctly
 	model->nbFrames = model_header->nbFrames;
 	
-	Sint32 bytesOff = (sizeof(modelData_t)); 
-	workAddress = (workAddress + bytesOff); //Add the texture size and the binary meta data size to the work address to reach the PDATA
+	Sint32 bytesOff = (sizeof(modelData_t));
+//Add the texture size and the binary meta data size to the work address to reach the model data	
+	workAddress = (workAddress + bytesOff); 
 	
 	model->size = (unsigned int)workAddress;
-	workAddress = loadPDATA((workAddress), model);
+	workAddress = loadGVPLY((workAddress), model);
 	model->size = (unsigned int)workAddress - model->size;
 
 	int baseTex = numTex; //numTex is a tga.c directive
-	if(src_tex_model != NULL) 
-	{
-	baseTex = src_tex_model->base_texture;
-	model->numTexture = src_tex_model->numTexture;
-	setTextures(model, baseTex); 
-	loadingNewTextures = 'N';
-	} else {
+	//if(src_tex_model != NULL) 
+	//{
+	//baseTex = src_tex_model->base_texture;
+	//model->numTexture = src_tex_model->numTexture;
+	//setTextures(model, baseTex); 
+	//loadingNewTextures = 'N';
+	//} else {
 	model->numTexture = setTextures(model, baseTex); 
-	}
+	//}
 	
 
 
@@ -178,24 +182,26 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 	// To facilitate this, workAddress is pointed forward past all important data that must not be overwritten.
 	// Thus the temporary pointer is pointing to all data that can be thrown out once parsed.
 	// The "NewTex" flag will determine if textures are loaded at all or not.
-	//unsigned char * readByte = workAddress;
-	if(loadingNewTextures == 'Y')
-	{
-		//void * temporaryAddress;
-		//temporaryAddress =
-		loadTextures(workAddress, model);
-		//readByte = temporaryAddress;
-	}
+	unsigned char * readByte = workAddress;
+//	if(loadingNewTextures == 'Y')
+//	{
+		void * temporaryAddress;
+		temporaryAddress = loadTextures(workAddress, model);
+		readByte = temporaryAddress;
+	//}
 	////////////////
 	// If the model type is 'B' (for BUILDING), create combined textures.
 	// Also read the item data at the end of the payload.
 	////////////////
-	if(model->type == MODEL_TYPE_BUILDING && loadingNewTextures == 'Y')
-	{
-			for(int j = 0; j < model->numTexture+1; j++)
-			{
-				make_combined_textures(model->base_texture + j);
-			}
+	// if(model->type == MODEL_TYPE_BUILDING)
+	// {
+		// if(loadingNewTextures == 'Y')
+		// {
+			// for(int j = 0; j < model->numTexture+1; j++)
+			// {
+				// make_combined_textures(model->base_texture + j);
+			// }
+		// }
 		//unsigned char * total_items = &readByte[0];
 		//unsigned char * unique_items = &readByte[1];
 		//short * item_data = (short *)&readByte[2];	
@@ -228,7 +234,7 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 		
 		// jo_printf(1, 11, "uitem(%i)", *total_items);
 		// jo_printf(1, 13, "amnti(%i)", *unique_items);
-	} 
+	//} 
 
 	
 	//////////////////////////////////////////////////////////////////////
@@ -256,6 +262,7 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 		}
 	
 	model->file_done = true;
+	model->was_loaded_from_CD = true;
 	
 	//Alignment
 	volatile unsigned int aligning_address = (volatile unsigned int)workAddress;
