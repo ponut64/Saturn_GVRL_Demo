@@ -5,6 +5,7 @@
 #include "tga.h"
 #include "render.h"
 #include "bounder.h"
+#include "mymath.h"
 
 #include "mloader.h"
 
@@ -116,6 +117,9 @@ void * loadGVPLY(void * startAddress, entity_t * model)
         workAddress=(void*)(workAddress + (sizeof(POINT) * model->pol->nbPolygon));
 		model->pol->maxtbl = (unsigned char *)workAddress;
         workAddress=(void*)(workAddress + (sizeof(unsigned char) * model->pol->nbPolygon));
+		//Padding: This has to be at least 2-bytes aligned.
+		//So in case there were an odd number of polygons, another byte is written to align it.
+		workAddress += (model->pol->nbPolygon & 1) ? 1 : 0;
         model->pol->attbl = (gvAtr*)workAddress;
         workAddress=(void*)(workAddress + (sizeof(gvAtr) * model->pol->nbPolygon));
 
@@ -126,7 +130,7 @@ void * gvLoad3Dmodel(Sint8 * filename, void * startAddress, entity_t * model, un
 {
 	nbg_sprintf(2, 2, "%s", filename);
 	modelData_t * model_header;
-	void * workAddress = startAddress;
+	void * workAddress = align_4(startAddress);
 	model->type = modelType;
 	GfsHn gfs_mdat;
 	Sint32 sector_count;

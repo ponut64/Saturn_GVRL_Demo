@@ -367,3 +367,11 @@ Bool	line_hit_plane_here(FIXED p0[XYZ], FIXED p1[XYZ], FIXED point_on_plane[XYZ]
 	return isPointonSegment(output, p0, p1);
 }
 
+
+void * align_4(void * ptr)
+{
+	ptr += (((unsigned int)ptr) & 1) ? 1 : 0;
+	ptr += (((unsigned int)ptr) & 2) ? 1 : 0;
+	return ptr;
+}
+
